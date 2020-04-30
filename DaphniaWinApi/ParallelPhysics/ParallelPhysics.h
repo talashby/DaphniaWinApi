@@ -10,43 +10,6 @@
 namespace PPh
 {
 
-struct EtherType
-{
-	enum EEtherType
-	{
-		Space = 0,
-		Crumb,
-		Block,
-		Observer
-	};
-};
-
-class ParallelPhysics
-{
-public:
-
-	static bool Init(const VectorInt32Math &universeSize); // returns true if success. threadsCount 0 means simulate near observer
-	static bool SaveUniverse(const std::string &fileName);
-	static ParallelPhysics* GetInstance();
-
-	const VectorInt32Math &GetUniverseSize() const;
-
-	void StartSimulation();
-	void StopSimulation();
-	bool IsSimulationRunning() const;
-
-	bool InitEtherCell(const VectorInt32Math &pos, EtherType::EEtherType type, const EtherColor &color = EtherColor()); // returns true if success
-
-	bool GetNextCrumb(VectorInt32Math &outCrumbPos, EtherColor &outCrumbColor);
-	static void EtherCellSetCrumbActor(const VectorInt32Math &pos, AActor *crumbActor);
-	static AActor* EtherCellGetCrumbActor(const VectorInt32Math &pos);
-private:
-	ParallelPhysics();
-
-	VectorInt32Math m_universeSize = VectorInt32Math::ZeroVector;
-	bool m_isSimulationRunning = false;
-};
-
 typedef int32_t PhotonParam; // warning! Depends on OBSERVER_EYE_SIZE
 constexpr int32_t UPDATE_EYE_TEXTURE_OUT = 20; // milliseconds
 constexpr int32_t STATISTIC_REQUEST_PERIOD = 900; // milliseconds
@@ -59,20 +22,24 @@ typedef std::shared_ptr< EyeColorArray > SP_EyeColorArray;
 class Observer
 {
 public:
-	static void Init();
+	static void Init(Observer *observer = nullptr);
+	static Observer* Instance();
+	Observer() = default;
+	virtual ~Observer() = default;
 
-	static Observer* GetInstance();
+	void StartSimulation();
+	void StopSimulation();
+	bool IsSimulationRunning() const;
 
-	void PPhTick(uint64_t socketC, uint32_t port);
+	void PPhTick();
 
-	void ChangeOrientation(const SP_EyeState &eyeState);
 	SP_EyeColorArray GrabTexture();
 	VectorInt32Math GetPosition() const;
 
 	const VectorInt32Math& GetOrientMinChanger() const;
 	const VectorInt32Math& GetOrientMaxChanger() const;
 
-	void GetStateParams(VectorInt32Math &outPosition, uint16_t &outMovingProgress, int16_t &outLatitude, int16_t &outLongitude, 
+	void GetStateExtParams(VectorInt32Math &outPosition, uint16_t &outMovingProgress, int16_t &outLatitude, int16_t &outLongitude, 
 		VectorInt32Math &outEatenCrumbPos);
 
 	void GetStatisticsParams(uint32_t &outQuantumOfTimePerSecond, uint32_t &outUniverseThreadsNum,
@@ -82,18 +49,25 @@ public:
 		uint64_t &outClientServerPerformanceRatio,
 		uint64_t &outServerClientPerformanceRatio);
 
-private:
-	friend class ParallelPhysics;
-	void SetPosition(const VectorInt32Math &pos);
-	void CalculateOrientChangers(const EyeArray &eyeArray);
-	OrientationVectorMath MaximizePPhOrientation(const VectorFloatMath &orientationVector);
+	// Set motor neurons
+	void SetIsLeft(bool value) { m_isLeft = value; }
+	void SetIsRight(bool value) { m_isRight = value; }
+	void SetIsUp(bool value) { m_isUp = value; }
+	void SetIsDown(bool value) { m_isDown = value; }
+	void SetIsForward(bool value) { m_isForward = value; }
+	void SetIsBackward(bool value) { m_isBackward = value; }
 
-	SP_EyeState m_eyeState;
-	SP_EyeState m_newEyeState; // Used from different threads
+protected:
+	const char* RecvServerMsg(); // returns nullptr if error occur
+	bool SendServerMsg(const MsgBase &msg, int32_t msgSize); // returns false if error occur
+	virtual void HandleReceivedMessage(const char *buffer);
+
+	bool m_isSimulationRunning = false;
+
+	uint32_t m_socketC;
+	uint32_t m_port;
 
 	const int32_t EYE_IMAGE_DELAY = 5000; // quantum of time
-	//const uint32_t EYE_FOV = PPH_INT_MAX/2; // quantum of length (MAX_INT/2 - 90 degrees; MAX_INT - 180 degrees; 2*MAX_INT - 360 degrees)
-
 	const int32_t ECHOLOCATION_FREQUENCY = 1; // quantum of time
 	int32_t m_echolocationCounter = 0;
 
@@ -124,12 +98,9 @@ private:
 	uint32_t m_TickTimeMusAverageObserverThread = 0;
 	uint64_t m_clientServerPerformanceRatio = 0;
 	uint64_t m_serverClientPerformanceRatio = 0;
+
+	// motor neurons
+	bool m_isLeft=false, m_isRight=false, m_isUp=false, m_isDown=false, m_isForward=false, m_isBackward=false;
 };
 
-namespace AdminTcp
-{
-	bool Connect();
-	void LoadCrumbs();
-	void Disconnect();
-}
 }

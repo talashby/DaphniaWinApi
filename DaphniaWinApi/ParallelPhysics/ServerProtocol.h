@@ -10,6 +10,7 @@ namespace PPh
 namespace CommonParams // Server - client common params
 {
 	constexpr int32_t PROTOCOL_VERSION = 1;
+	constexpr int32_t DEFAULT_BUFLEN = 512;
 	constexpr uint16_t CLIENT_UDP_PORT_START = 50000;
 	constexpr uint16_t MAX_CLIENTS = 10;
 	constexpr int32_t OBSERVER_EYE_SIZE = 16; // pixels
