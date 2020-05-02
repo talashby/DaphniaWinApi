@@ -195,6 +195,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		EndPaint(hWnd, &ps);
 	}
 	break;*/
+	//case WM_ERASEBKGND:
+	//	return 1;
     case WM_PAINT:
     {
 		BITMAP bm;
@@ -244,6 +246,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_DESTROY:
 		KillTimer(hWnd, TIMER1_IDT);
+		PPh::Observer::Instance()->StopSimulation();
 		PostQuitMessage(0);
 		break;
 	default:
