@@ -158,6 +158,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
     }
     break;
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case VK_LEFT:
+			PPh::Observer::Instance()->SetIsLeft(true);
+			break;
+
+		case VK_RIGHT:
+			PPh::Observer::Instance()->SetIsRight(true);
+			break;
+		}
+		break;
+	case WM_KEYUP:
+		switch (wParam)
+		{
+		case VK_LEFT:
+			PPh::Observer::Instance()->SetIsLeft(false);
+			break;
+
+		case VK_RIGHT:
+			PPh::Observer::Instance()->SetIsRight(false);
+			break;
+		}
+		break;
 	case WM_TIMER:
 	{
 		switch (wParam)
@@ -204,6 +228,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		HDC hdc = BeginPaint(hWnd, &ps);
 
+		HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0)); //create brush
+		HBITMAP hbmOldMain = (HBITMAP)SelectObject(hdc, brush); //select brush into DC
+		GetObject(g_hbmBall, sizeof(bm), &bm);
+
 		HDC hdcMem = CreateCompatibleDC(hdc);
 		HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, g_hbmBall);
 
@@ -220,7 +248,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				for (uint32_t xx = 0; xx < eyeColorArray[yy].size(); ++xx)
 				{
-					uint8_t alpha = eyeColorArray[xx][yy].m_colorA;
+					Rectangle(hdc, xx * 16, 256 - yy * 16, (xx+1) * 16, 256 - (yy+1) * 16); //cleanup, draw rectangle
+					uint8_t alpha = eyeColorArray[yy][xx].m_colorA;
 					if (alpha > 0)
 					{
 						SelectObject(hdcMem, g_hbmBall);
@@ -240,6 +269,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		SelectObject(hdcMem, hbmOld);
 		DeleteDC(hdcMem);
+		SelectObject(hdc, hbmOldMain);
 
 		EndPaint(hWnd, &ps);
 	}
