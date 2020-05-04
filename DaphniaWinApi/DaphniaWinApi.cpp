@@ -7,6 +7,7 @@
 
 #pragma comment (lib, "msimg32.lib")
 
+constexpr int EYE_PIXEL_SIZE = 32;
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -81,8 +82,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hInstance      = hInstance;
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DAPHNIAWINAPI));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-	HBRUSH hb = ::CreateSolidBrush(RGB(0, 0, 0));
+	HBRUSH hb = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wcex.hbrBackground = hb;
     wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_DAPHNIAWINAPI);
     wcex.lpszClassName  = szWindowClass;
@@ -119,6 +119,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 }
 
 HBITMAP g_hbmBall = NULL;
+char* g_hbmBallBuffer = NULL;
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -136,11 +137,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
 	case WM_CREATE:
+	{
 		SetTimer(hWnd, TIMER1_IDT, TIMER1_DURATION_MS, (TIMERPROC)NULL);
-		g_hbmBall = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BLUE));
+		/*g_hbmBall = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BLUE));
 		if (g_hbmBall == NULL)
-			MessageBox(hWnd, L"Could not load IDB_BALL!", L"Error", MB_OK | MB_ICONEXCLAMATION);
-		break;
+			MessageBox(hWnd, L"Could not load IDB_BALL!", L"Error", MB_OK | MB_ICONEXCLAMATION);*/
+
+		constexpr int bmWidth = 16;
+		constexpr int bmHeight = 16;
+		BITMAPINFO bm = { sizeof(BITMAPINFOHEADER),
+				bmWidth, bmHeight, 1, 24, BI_RGB, bmWidth*bmHeight*3, 0, 0, 0, 0 };
+		g_hbmBall = CreateDIBSection(GetDC(hWnd), &bm, DIB_RGB_COLORS, (void**)&g_hbmBallBuffer, 0, 0);
+		if (g_hbmBall == NULL) {
+			DWORD lastError = GetLastError();
+			return lastError;
+		}
+		memset(g_hbmBallBuffer, 255, bmWidth*bmHeight*3);
+	}
+	break;
     case WM_COMMAND:
     {
         int wmId = LOWORD(wParam);
@@ -159,29 +173,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     break;
 	case WM_KEYDOWN:
-		switch (wParam)
-		{
-		case VK_LEFT:
-			PPh::Observer::Instance()->SetIsLeft(true);
-			break;
-
-		case VK_RIGHT:
-			PPh::Observer::Instance()->SetIsRight(true);
-			break;
-		}
-		break;
 	case WM_KEYUP:
+	{
+		bool bSet = true;
+		if (WM_KEYUP == message)
+		{
+			bSet = false;
+		}
 		switch (wParam)
 		{
 		case VK_LEFT:
-			PPh::Observer::Instance()->SetIsLeft(false);
+			PPh::Observer::Instance()->SetIsLeft(bSet);
 			break;
-
 		case VK_RIGHT:
-			PPh::Observer::Instance()->SetIsRight(false);
+			PPh::Observer::Instance()->SetIsRight(bSet);
+			break;
+		case VK_UP:
+			PPh::Observer::Instance()->SetIsUp(bSet);
+			break;
+		case VK_DOWN:
+			PPh::Observer::Instance()->SetIsDown(bSet);
+			break;
+		case VK_SPACE:
+			PPh::Observer::Instance()->SetIsForward(bSet);
+			break;
+		case '/':
+			PPh::Observer::Instance()->SetIsBackward(bSet);
 			break;
 		}
-		break;
+	}
+	break;
 	case WM_TIMER:
 	{
 		switch (wParam)
@@ -194,33 +215,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	break;
-	/*case WM_ERASEBKGND:
-	{
-		RECT rcWin;
-		RECT rcWnd;
-		HWND parWnd = GetParent(hWnd); // Get the parent window.
-		HDC parDc = GetDC(parWnd); // Get its DC.
-
-		GetWindowRect(hWnd, &rcWnd);
-
-		POINT rectTL;
-		rectTL.x = rcWnd.left;
-		rectTL.y = rcWnd.top;
-		ScreenToClient(hWnd, &rectTL);
-		ScreenToClient(parWnd, &rectTL); // Convert to the parent's co-ordinates
-		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
-		GetClipBox(hdc, &rcWin);
-		// Copy from parent DC.
-		BitBlt(hdc, rcWin.left, rcWin.top, rcWin.right - rcWin.left,
-			rcWin.bottom - rcWin.top, parDc, rcWnd.left, rcWnd.top, SRCCOPY);
-
-		ReleaseDC(parWnd, parDc);
-		EndPaint(hWnd, &ps);
-	}
-	break;*/
-	//case WM_ERASEBKGND:
-	//	return 1;
     case WM_PAINT:
     {
 		BITMAP bm;
@@ -228,9 +222,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		HDC hdc = BeginPaint(hWnd, &ps);
 
-		HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0)); //create brush
-		HBITMAP hbmOldMain = (HBITMAP)SelectObject(hdc, brush); //select brush into DC
-		GetObject(g_hbmBall, sizeof(bm), &bm);
+		{ // clean background
+			HBRUSH hb = (HBRUSH)GetStockObject(BLACK_BRUSH);
+			HBITMAP hbmTmp1 = (HBITMAP)SelectObject(hdc, hb); //select brush into DC
+			Rectangle(hdc, 0, 0, EYE_PIXEL_SIZE*PPh::CommonParams::OBSERVER_EYE_SIZE, EYE_PIXEL_SIZE*PPh::CommonParams::OBSERVER_EYE_SIZE); //cleanup, draw rectangle
+			SelectObject(hdc, hbmTmp1);
+		}
 
 		HDC hdcMem = CreateCompatibleDC(hdc);
 		HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, g_hbmBall);
@@ -248,12 +245,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				for (uint32_t xx = 0; xx < eyeColorArray[yy].size(); ++xx)
 				{
-					Rectangle(hdc, xx * 16, 256 - yy * 16, (xx+1) * 16, 256 - (yy+1) * 16); //cleanup, draw rectangle
-					uint8_t alpha = eyeColorArray[yy][xx].m_colorA;
+					uint8_t alpha = eyeColorArray[yy][xx].m_colorA; // first yy second xx see Observer::m_eyeColorArray comments
+					PPh::EtherColor &color = eyeColorArray[yy][xx];
 					if (alpha > 0)
 					{
 						SelectObject(hdcMem, g_hbmBall);
 						GetObject(g_hbmBall, sizeof(bm), &bm);
+						for (int ii=0; ii<(bm.bmWidth*bm.bmHeight*3); ii+=3)
+						{
+							g_hbmBallBuffer[0] = color.m_colorR;
+							g_hbmBallBuffer[1] = color.m_colorG;
+							g_hbmBallBuffer[2] = color.m_colorB;
+						}
 
 						::SetStretchBltMode(hdcMem, COLORONCOLOR);
 						BLENDFUNCTION bf;
@@ -261,7 +264,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						bf.BlendFlags = 0;
 						bf.SourceConstantAlpha = alpha;
 						bf.AlphaFormat = 0;
-						::AlphaBlend(hdc, xx*16, 240-yy*16, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, bf);
+						::AlphaBlend(hdc, xx*EYE_PIXEL_SIZE, yy*EYE_PIXEL_SIZE, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, bf);
 					}
 				}
 			}
@@ -269,7 +272,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		SelectObject(hdcMem, hbmOld);
 		DeleteDC(hdcMem);
-		SelectObject(hdc, hbmOldMain);
 
 		EndPaint(hWnd, &ps);
 	}

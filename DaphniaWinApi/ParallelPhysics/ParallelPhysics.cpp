@@ -27,11 +27,9 @@ Observer* s_observer = nullptr;
 std::mutex s_observerStateParamsMutex;
 std::mutex s_serverStatisticsMutex;
 
-namespace
-{
-	WSADATA wsaData;
-	SOCKET SendingSocket;
-}
+bool b_wsaInitialised = false;
+WSADATA s_wsaData;
+
 
 void Observer::Init(Observer *observer)
 {
@@ -39,13 +37,6 @@ void Observer::Init(Observer *observer)
 	{
 		delete s_observer;
 	}
-	else
-	{
-		// Initialize Winsock version 2.2
-		WSAStartup(MAKEWORD(2, 2), &wsaData);
-		printf("Client: Winsock DLL status is %s.\n", wsaData.szSystemStatus);
-	}
-
 	if (observer)
 	{
 		s_observer = observer;
@@ -64,6 +55,11 @@ PPh::Observer* Observer::Instance()
 std::thread s_simulationThread;
 void Observer::StartSimulation()
 {
+	// Initialize Winsock version 2.2
+	bool wsaResult = WSAStartup(MAKEWORD(2, 2), &s_wsaData);
+	b_wsaInitialised = 0 == wsaResult;
+	printf("Client: Winsock DLL status is %s.\n", s_wsaData.szSystemStatus);
+
 	m_isSimulationRunning = true;
 	static uint64_t lastObserverId = 0;
 	m_socketC = 0;
@@ -128,6 +124,11 @@ void Observer::StartSimulation()
 
 void Observer::StopSimulation()
 {
+	if (b_wsaInitialised)
+	{
+		WSACleanup();
+		b_wsaInitialised = false;
+	}
 	m_isSimulationRunning = false;
 	if (s_simulationThread.native_handle())
 	{
@@ -218,6 +219,7 @@ void Observer::PPhTick()
 			else if (const MsgSendPhoton *msgSendPhoton = QueryMessage<MsgSendPhoton>(buffer))
 			{
 				// receive photons back // revert Y-coordinate because of texture format
+				// photon (x,y) placed to [CommonParams::OBSERVER_EYE_SIZE - y -1][x] for simple copy to texture purpose
 				m_eyeColorArray[CommonParams::OBSERVER_EYE_SIZE - msgSendPhoton->m_posY - 1][msgSendPhoton->m_posX] = msgSendPhoton->m_color;
 				m_eyeUpdateTimeArray[CommonParams::OBSERVER_EYE_SIZE - msgSendPhoton->m_posY - 1][msgSendPhoton->m_posX] = timeOfTheUniverse;
 			}
