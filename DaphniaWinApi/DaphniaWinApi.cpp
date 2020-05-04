@@ -118,8 +118,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-HBITMAP g_hbmBall = NULL;
-char* g_hbmBallBuffer = NULL;
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -139,20 +137,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 	{
 		SetTimer(hWnd, TIMER1_IDT, TIMER1_DURATION_MS, (TIMERPROC)NULL);
-		/*g_hbmBall = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BLUE));
-		if (g_hbmBall == NULL)
-			MessageBox(hWnd, L"Could not load IDB_BALL!", L"Error", MB_OK | MB_ICONEXCLAMATION);*/
-
-		constexpr int bmWidth = 16;
-		constexpr int bmHeight = 16;
-		BITMAPINFO bm = { sizeof(BITMAPINFOHEADER),
-				bmWidth, bmHeight, 1, 24, BI_RGB, bmWidth*bmHeight*3, 0, 0, 0, 0 };
-		g_hbmBall = CreateDIBSection(GetDC(hWnd), &bm, DIB_RGB_COLORS, (void**)&g_hbmBallBuffer, 0, 0);
-		if (g_hbmBall == NULL) {
-			DWORD lastError = GetLastError();
-			return lastError;
-		}
-		memset(g_hbmBallBuffer, 255, bmWidth*bmHeight*3);
 	}
 	break;
     case WM_COMMAND:
@@ -217,20 +201,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
     case WM_PAINT:
     {
-		BITMAP bm;
 		PAINTSTRUCT ps;
 
 		HDC hdc = BeginPaint(hWnd, &ps);
 
-		{ // clean background
-			HBRUSH hb = (HBRUSH)GetStockObject(BLACK_BRUSH);
-			HBITMAP hbmTmp1 = (HBITMAP)SelectObject(hdc, hb); //select brush into DC
-			Rectangle(hdc, 0, 0, EYE_PIXEL_SIZE*PPh::CommonParams::OBSERVER_EYE_SIZE, EYE_PIXEL_SIZE*PPh::CommonParams::OBSERVER_EYE_SIZE); //cleanup, draw rectangle
-			SelectObject(hdc, hbmTmp1);
-		}
-
 		HDC hdcMem = CreateCompatibleDC(hdc);
-		HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, g_hbmBall);
+		char *bmBuffer;
+		BITMAPINFO bmInfo = { sizeof(BITMAPINFOHEADER),
+				1, 1, 1, 24, BI_RGB, 3, 0, 0, 0, 0 };
+		HBITMAP hbmBall = CreateDIBSection(GetDC(hWnd), &bmInfo, DIB_RGB_COLORS, (void**)&bmBuffer, 0, 0);
+		if (hbmBall == NULL) {
+			DWORD lastError = GetLastError();
+			return lastError;
+		}
+		SelectObject(hdcMem, hbmBall);
 
 		static PPh::SP_EyeColorArray s_spEyeColorArrayOut;
 		PPh::SP_EyeColorArray spEyeColorArrayOut = PPh::Observer::Instance()->GrabTexture();
@@ -247,32 +231,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					uint8_t alpha = eyeColorArray[yy][xx].m_colorA; // first yy second xx see Observer::m_eyeColorArray comments
 					PPh::EtherColor &color = eyeColorArray[yy][xx];
-					if (alpha > 0)
-					{
-						SelectObject(hdcMem, g_hbmBall);
-						GetObject(g_hbmBall, sizeof(bm), &bm);
-						for (int ii=0; ii<(bm.bmWidth*bm.bmHeight*3); ii+=3)
-						{
-							g_hbmBallBuffer[0] = color.m_colorR;
-							g_hbmBallBuffer[1] = color.m_colorG;
-							g_hbmBallBuffer[2] = color.m_colorB;
-						}
+					bmBuffer[0] = color.m_colorR * alpha / 255;
+					bmBuffer[1] = color.m_colorG * alpha / 255;
+					bmBuffer[2] = color.m_colorB * alpha / 255;
 
-						::SetStretchBltMode(hdcMem, COLORONCOLOR);
-						BLENDFUNCTION bf;
-						bf.BlendOp = AC_SRC_OVER;
-						bf.BlendFlags = 0;
-						bf.SourceConstantAlpha = alpha;
-						bf.AlphaFormat = 0;
-						::AlphaBlend(hdc, xx*EYE_PIXEL_SIZE, yy*EYE_PIXEL_SIZE, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, bf);
-					}
+					StretchBlt(hdc, xx*EYE_PIXEL_SIZE, yy*EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, hdcMem, 0, 0, 1, 1, SRCCOPY);
 				}
 			}
 		}
-
-		SelectObject(hdcMem, hbmOld);
 		DeleteDC(hdcMem);
-
+		DeleteObject(hbmBall);
 		EndPaint(hWnd, &ps);
 	}
 	break;
