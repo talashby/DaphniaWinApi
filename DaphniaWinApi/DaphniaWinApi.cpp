@@ -4,8 +4,11 @@
 #include "framework.h"
 #include "DaphniaWinApi.h"
 #include "ParallelPhysics/ParallelPhysics.h"
+#include <string>
+#include <playsoundapi.h>
 
 #pragma comment (lib, "msimg32.lib")
+#pragma comment(lib,"Winmm.lib")
 
 constexpr int EYE_PIXEL_SIZE = 32;
 #define MAX_LOADSTRING 100
@@ -132,11 +135,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	constexpr int TIMER1_IDT = 1;
 	constexpr int TIMER1_DURATION_MS = 30;
+
+	constexpr int TIMER2_STATISTICS_IDT = 2;
+	constexpr int TIMER2_DURATION_MS = 1000;
+	static bool s_statisticsUpdate = false;
+
     switch (message)
     {
 	case WM_CREATE:
 	{
 		SetTimer(hWnd, TIMER1_IDT, TIMER1_DURATION_MS, (TIMERPROC)NULL);
+		SetTimer(hWnd, TIMER2_STATISTICS_IDT, TIMER2_DURATION_MS, (TIMERPROC)NULL);
 	}
 	break;
     case WM_COMMAND:
@@ -196,6 +205,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				InvalidateRect(hWnd, NULL, false);
 			}
 			break;
+			case TIMER2_STATISTICS_IDT:
+			{
+				s_statisticsUpdate = true;
+			}
+			break;
 		}
 	}
 	break;
@@ -231,9 +245,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					uint8_t alpha = eyeColorArray[yy][xx].m_colorA; // first yy second xx see Observer::m_eyeColorArray comments
 					PPh::EtherColor &color = eyeColorArray[yy][xx];
-					bmBuffer[0] = color.m_colorR * alpha / 255;
+					bmBuffer[0] = color.m_colorB * alpha / 255;
 					bmBuffer[1] = color.m_colorG * alpha / 255;
-					bmBuffer[2] = color.m_colorB * alpha / 255;
+					bmBuffer[2] = color.m_colorR * alpha / 255;
 
 					StretchBlt(hdc, xx*EYE_PIXEL_SIZE, yy*EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, hdcMem, 0, 0, 1, 1, SRCCOPY);
 				}
@@ -241,6 +255,60 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		DeleteDC(hdcMem);
 		DeleteObject(hbmBall);
+
+		PPh::VectorInt32Math outPosition;
+		uint16_t outMovingProgress;
+		int16_t outLatitude, outLongitude;
+		bool outEatenCrumb;
+		PPh::Observer::Instance()->GetStateExtParams(outPosition, outMovingProgress, outLatitude, outLongitude, outEatenCrumb);
+		PPh::Observer::Instance()->GrabEatenCrumbPos();
+		if (outEatenCrumb)
+		{
+			PlaySound((char*)IDR_WAVE1, NULL, SND_RESOURCE | SND_ASYNC);
+		}
+		if (s_statisticsUpdate)
+		{
+			s_statisticsUpdate = false;
+
+			RECT rc;
+			GetClientRect(hWnd, &rc);
+			rc.left = EYE_PIXEL_SIZE * PPh::CommonParams::OBSERVER_EYE_SIZE + EYE_PIXEL_SIZE;
+			rc.top += (rc.bottom - rc.top) / 5;
+			SelectObject(hdc, GetStockObject(BLACK_BRUSH));
+			Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom); // cleanup screen
+			SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
+			SetBkMode(hdc, TRANSPARENT);
+			SetTextColor(hdc, RGB(255, 255, 255));
+			std::string strOut = "STATISTICS:";
+			{
+				uint32_t outQuantumOfTimePerSecond;
+				uint32_t outUniverseThreadsNum;
+				uint32_t outTickTimeMusAverageUniverseThreadsMin;
+				uint32_t outTickTimeMusAverageUniverseThreadsMax;
+				uint32_t outTickTimeMusAverageObserverThread;
+				uint64_t outClientServerPerformanceRatio;
+				uint64_t outServerClientPerformanceRatio;
+				PPh::Observer::Instance()->GetStatisticsParams(outQuantumOfTimePerSecond, outUniverseThreadsNum,
+					outTickTimeMusAverageUniverseThreadsMin, outTickTimeMusAverageUniverseThreadsMax,
+					outTickTimeMusAverageObserverThread, outClientServerPerformanceRatio, outServerClientPerformanceRatio);
+				strOut += std::string("\nFPS (quantum of time per second): ") + std::to_string(outQuantumOfTimePerSecond);
+				strOut += "\nUniverse threads count: " + std::to_string(outUniverseThreadsNum);
+				if (outUniverseThreadsNum)
+				{
+					strOut += "\nTick time(ms). Observer thread: " + std::to_string(outTickTimeMusAverageObserverThread / 1000.0f);
+					strOut += "\nTick time(ms). Fastest universe thread: " + std::to_string(outTickTimeMusAverageUniverseThreadsMin / 1000.0f);
+					strOut += "\nTick time(ms). Slowest universe thread: " + std::to_string(outTickTimeMusAverageUniverseThreadsMax / 1000.0f);
+				}
+				strOut += "\nClient-Server performance ratio: " + std::to_string(outClientServerPerformanceRatio / 1000.0f);
+				strOut += "\nServer-Client performance ratio: " + std::to_string(outServerClientPerformanceRatio / 1000.0f);
+				strOut += std::string("\nPosition: (") + std::to_string(outPosition.m_posX) + ", " +std::to_string(outPosition.m_posY) + ", " +
+					std::to_string(outPosition.m_posZ) + ")";
+				strOut += std::string("\nLattitude: ") + std::to_string(outLatitude);
+				strOut += std::string("\nLongitude: ") + std::to_string(outLongitude);
+			}
+			DrawText(hdc, strOut.c_str(), (int)strOut.length(), &rc, DT_LEFT);
+		}
+
 		EndPaint(hWnd, &ps);
 	}
 	break;
