@@ -140,12 +140,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	constexpr int TIMER2_DURATION_MS = 1000;
 	static bool s_statisticsUpdate = false;
 
+	static char *s_bmBuffer;
+	static HDC s_hdcMem;
+	static HBITMAP s_hbmBall;
     switch (message)
     {
 	case WM_CREATE:
 	{
 		SetTimer(hWnd, TIMER1_IDT, TIMER1_DURATION_MS, (TIMERPROC)NULL);
 		SetTimer(hWnd, TIMER2_STATISTICS_IDT, TIMER2_DURATION_MS, (TIMERPROC)NULL);
+
+		s_hdcMem = CreateCompatibleDC(GetDC(hWnd));
+		BITMAPINFO bmInfo = { sizeof(BITMAPINFOHEADER),
+				1, 1, 1, 24, BI_RGB, 3, 0, 0, 0, 0 };
+		s_hbmBall = CreateDIBSection(s_hdcMem, &bmInfo, DIB_RGB_COLORS, (void**)&s_bmBuffer, 0, 0);
+		if (s_hbmBall == NULL) {
+			DWORD lastError = GetLastError();
+			return lastError;
+		}
+		HGDIOBJ selectedObjectOld = SelectObject(s_hdcMem, s_hbmBall);
 	}
 	break;
     case WM_COMMAND:
@@ -190,7 +203,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case VK_SPACE:
 			PPh::Observer::Instance()->SetIsForward(bSet);
 			break;
-		case '/':
+		case VK_OEM_2:
 			PPh::Observer::Instance()->SetIsBackward(bSet);
 			break;
 		}
@@ -219,17 +232,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		HDC hdc = BeginPaint(hWnd, &ps);
 
-		HDC hdcMem = CreateCompatibleDC(hdc);
-		char *bmBuffer;
-		BITMAPINFO bmInfo = { sizeof(BITMAPINFOHEADER),
-				1, 1, 1, 24, BI_RGB, 3, 0, 0, 0, 0 };
-		HBITMAP hbmBall = CreateDIBSection(GetDC(hWnd), &bmInfo, DIB_RGB_COLORS, (void**)&bmBuffer, 0, 0);
-		if (hbmBall == NULL) {
-			DWORD lastError = GetLastError();
-			return lastError;
-		}
-		SelectObject(hdcMem, hbmBall);
-
 		static PPh::SP_EyeColorArray s_spEyeColorArrayOut;
 		PPh::SP_EyeColorArray spEyeColorArrayOut = PPh::Observer::Instance()->GrabTexture();
 		if (spEyeColorArrayOut)
@@ -245,16 +247,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					uint8_t alpha = eyeColorArray[yy][xx].m_colorA; // first yy second xx see Observer::m_eyeColorArray comments
 					PPh::EtherColor &color = eyeColorArray[yy][xx];
-					bmBuffer[0] = color.m_colorB * alpha / 255;
-					bmBuffer[1] = color.m_colorG * alpha / 255;
-					bmBuffer[2] = color.m_colorR * alpha / 255;
+					s_bmBuffer[0] = color.m_colorB * alpha / 255;
+					s_bmBuffer[1] = color.m_colorG * alpha / 255;
+					s_bmBuffer[2] = color.m_colorR * alpha / 255;
 
-					StretchBlt(hdc, xx*EYE_PIXEL_SIZE, yy*EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, hdcMem, 0, 0, 1, 1, SRCCOPY);
+					StretchBlt(hdc, xx*EYE_PIXEL_SIZE, yy*EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, EYE_PIXEL_SIZE, s_hdcMem, 0, 0, 1, 1, SRCCOPY);
 				}
 			}
 		}
-		DeleteDC(hdcMem);
-		DeleteObject(hbmBall);
 
 		PPh::VectorInt32Math outPosition;
 		uint16_t outMovingProgress;
@@ -313,6 +313,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	break;
 	case WM_DESTROY:
+		DeleteObject(s_hbmBall);
+		DeleteDC(s_hdcMem);
 		KillTimer(hWnd, TIMER1_IDT);
 		PPh::Observer::Instance()->StopSimulation();
 		PostQuitMessage(0);
