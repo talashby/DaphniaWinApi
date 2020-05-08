@@ -30,13 +30,13 @@
     <ClInclude Include="DaphniaWinApi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ParallelPhysics\ParallelPhysics.h">
-      <Filter>Source Files\ParallelPhysics</Filter>
-    </ClInclude>
     <ClInclude Include="ParallelPhysics\PPhHelpers.h">
       <Filter>Source Files\ParallelPhysics</Filter>
     </ClInclude>
     <ClInclude Include="ParallelPhysics\ServerProtocol.h">
+      <Filter>Source Files\ParallelPhysics</Filter>
+    </ClInclude>
+    <ClInclude Include="ParallelPhysics\ObserverClient.h">
       <Filter>Source Files\ParallelPhysics</Filter>
     </ClInclude>
   </ItemGroup>
@@ -44,10 +44,10 @@
     <ClCompile Include="DaphniaWinApi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ParallelPhysics\ParallelPhysics.cpp">
+    <ClCompile Include="ParallelPhysics\PPhHelpers.cpp">
       <Filter>Source Files\ParallelPhysics</Filter>
     </ClCompile>
-    <ClCompile Include="ParallelPhysics\PPhHelpers.cpp">
+    <ClCompile Include="ParallelPhysics\ObserverClient.cpp">
       <Filter>Source Files\ParallelPhysics</Filter>
     </ClCompile>
   </ItemGroup>

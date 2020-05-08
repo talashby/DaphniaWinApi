@@ -3,7 +3,7 @@
 
 #include "framework.h"
 #include "DaphniaWinApi.h"
-#include "ParallelPhysics/ParallelPhysics.h"
+#include "ParallelPhysics/ObserverClient.h"
 #include <string>
 #include <playsoundapi.h>
 
@@ -39,8 +39,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_DAPHNIAWINAPI, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-	PPh::Observer::Init();
-	PPh::Observer::Instance()->StartSimulation();
+	PPh::ObserverClient::Init();
+	PPh::ObserverClient::Instance()->StartSimulation();
 
     // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow))
@@ -189,22 +189,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 		case VK_LEFT:
-			PPh::Observer::Instance()->SetIsLeft(bSet);
+			PPh::ObserverClient::Instance()->SetIsLeft(bSet);
 			break;
 		case VK_RIGHT:
-			PPh::Observer::Instance()->SetIsRight(bSet);
+			PPh::ObserverClient::Instance()->SetIsRight(bSet);
 			break;
 		case VK_UP:
-			PPh::Observer::Instance()->SetIsUp(bSet);
+			PPh::ObserverClient::Instance()->SetIsUp(bSet);
 			break;
 		case VK_DOWN:
-			PPh::Observer::Instance()->SetIsDown(bSet);
+			PPh::ObserverClient::Instance()->SetIsDown(bSet);
 			break;
 		case VK_SPACE:
-			PPh::Observer::Instance()->SetIsForward(bSet);
+			PPh::ObserverClient::Instance()->SetIsForward(bSet);
 			break;
 		case VK_OEM_2:
-			PPh::Observer::Instance()->SetIsBackward(bSet);
+			PPh::ObserverClient::Instance()->SetIsBackward(bSet);
 			break;
 		}
 	}
@@ -233,7 +233,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hWnd, &ps);
 
 		static PPh::SP_EyeColorArray s_spEyeColorArrayOut;
-		PPh::SP_EyeColorArray spEyeColorArrayOut = PPh::Observer::Instance()->GrabTexture();
+		PPh::SP_EyeColorArray spEyeColorArrayOut = PPh::ObserverClient::Instance()->GrabTexture();
 		if (spEyeColorArrayOut)
 		{
 			s_spEyeColorArrayOut = spEyeColorArrayOut;
@@ -260,8 +260,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		uint16_t outMovingProgress;
 		int16_t outLatitude, outLongitude;
 		bool outEatenCrumb;
-		PPh::Observer::Instance()->GetStateExtParams(outPosition, outMovingProgress, outLatitude, outLongitude, outEatenCrumb);
-		PPh::Observer::Instance()->GrabEatenCrumbPos();
+		PPh::ObserverClient::Instance()->GetStateExtParams(outPosition, outMovingProgress, outLatitude, outLongitude, outEatenCrumb);
+		PPh::ObserverClient::Instance()->GrabEatenCrumbPos();
 		if (outEatenCrumb)
 		{
 			PlaySound((char*)IDR_WAVE1, NULL, SND_RESOURCE | SND_ASYNC);
@@ -288,7 +288,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				uint32_t outTickTimeMusAverageObserverThread;
 				uint64_t outClientServerPerformanceRatio;
 				uint64_t outServerClientPerformanceRatio;
-				PPh::Observer::Instance()->GetStatisticsParams(outQuantumOfTimePerSecond, outUniverseThreadsNum,
+				PPh::ObserverClient::Instance()->GetStatisticsParams(outQuantumOfTimePerSecond, outUniverseThreadsNum,
 					outTickTimeMusAverageUniverseThreadsMin, outTickTimeMusAverageUniverseThreadsMax,
 					outTickTimeMusAverageObserverThread, outClientServerPerformanceRatio, outServerClientPerformanceRatio);
 				strOut += std::string("\nFPS (quantum of time per second): ") + std::to_string(outQuantumOfTimePerSecond);
@@ -316,7 +316,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		DeleteObject(s_hbmBall);
 		DeleteDC(s_hdcMem);
 		KillTimer(hWnd, TIMER1_IDT);
-		PPh::Observer::Instance()->StopSimulation();
+		PPh::ObserverClient::Instance()->StopSimulation();
 		PostQuitMessage(0);
 		break;
 	default:
