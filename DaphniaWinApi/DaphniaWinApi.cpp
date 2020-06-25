@@ -288,7 +288,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			RECT rc;
 			GetClientRect(hWnd, &rc);
-			rc.left = EYE_PIXEL_SIZE * PPh::CommonParams::OBSERVER_EYE_SIZE + EYE_PIXEL_SIZE;
+			rc.left = EYE_PIXEL_SIZE * PPh::GetObserverEyeSize() + EYE_PIXEL_SIZE;
 			rc.top += (rc.bottom - rc.top) / 5;
 			SelectObject(hdc, GetStockObject(BLACK_BRUSH));
 			Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom); // cleanup screen
