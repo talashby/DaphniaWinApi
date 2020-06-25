@@ -159,6 +159,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return lastError;
 		}
 		HGDIOBJ selectedObjectOld = SelectObject(s_hdcMem, s_hbmBall);
+
+		if (!PPh::ObserverClient::Instance()->IsSimulationRunning())
+		{
+			uint32_t serverVersion = PPh::ObserverClient::Instance()->GetServerProtocolVersion();
+			if (serverVersion && serverVersion != PPh::CommonParams::PROTOCOL_VERSION)
+			{
+				std::string str = "Server protocol: " + std::to_string(serverVersion) + "\n" + "Client protocol: " +
+					std::to_string(PPh::CommonParams::PROTOCOL_VERSION);
+				MessageBox(hWnd, str.c_str(), "Wrong protocol", MB_OK);
+			}
+			else
+			{
+				MessageBox(hWnd, "Unknown server error", "Server error", MB_OK);
+			}
+			
+		}
 	}
 	break;
     case WM_COMMAND:

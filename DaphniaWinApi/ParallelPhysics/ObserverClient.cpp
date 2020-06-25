@@ -92,6 +92,7 @@ void ObserverClient::StartSimulation()
 					else
 					{
 						// wrong protocol
+						m_serverProtocolVersion = msgReceive->m_serverVersion;
 						closesocket(m_socketC);
 						m_socketC = 0;
 						break;
@@ -117,7 +118,8 @@ void ObserverClient::StartSimulation()
 	}
 	else
 	{
-		// server not found
+		// server not found or wrong protocol
+		m_isSimulationRunning = false;
 	}
 
 }
@@ -361,6 +363,11 @@ void ObserverClient::GetStatisticsParams(uint32_t &outQuantumOfTimePerSecond, ui
 	outTickTimeMusAverageObserverThread = m_TickTimeMusAverageObserverThread;
 	outClientServerPerformanceRatio = m_clientServerPerformanceRatio;
 	outServerClientPerformanceRatio = m_serverClientPerformanceRatio;
+}
+
+uint32_t ObserverClient::GetServerProtocolVersion() const
+{
+	return m_serverProtocolVersion;
 }
 
 const char* ObserverClient::RecvServerMsg()
