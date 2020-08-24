@@ -16,9 +16,6 @@
     <Filter Include="Source Files\ParallelPhysics">
       <UniqueIdentifier>{292c1b62-71eb-4a09-86d1-bf22fe0d8e6c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\NervousSystem">
-      <UniqueIdentifier>{7b51e900-6b37-44ff-a8c6-c9aab82ef7e7}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -42,9 +39,6 @@
     <ClInclude Include="ParallelPhysics\ObserverClient.h">
       <Filter>Source Files\ParallelPhysics</Filter>
     </ClInclude>
-    <ClInclude Include="NervousSystem\NervousSystem.h">
-      <Filter>Source Files\NervousSystem</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DaphniaWinApi.cpp">
@@ -55,9 +49,6 @@
     </ClCompile>
     <ClCompile Include="ParallelPhysics\ObserverClient.cpp">
       <Filter>Source Files\ParallelPhysics</Filter>
-    </ClCompile>
-    <ClCompile Include="NervousSystem\NervousSystem.cpp">
-      <Filter>Source Files\NervousSystem</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

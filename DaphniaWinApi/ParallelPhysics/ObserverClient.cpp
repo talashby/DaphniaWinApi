@@ -6,7 +6,6 @@
 #include "thread"
 #include "atomic"
 #include "chrono"
-#include "../NervousSystem/NervousSystem.h"
 
 #undef UNICODE
 #define WIN32_LEAN_AND_MEAN

@@ -6,7 +6,6 @@
 #include "ParallelPhysics/ObserverClient.h"
 #include <string>
 #include <playsoundapi.h>
-#include "NervousSystem/NervousSystem.h"
 
 #pragma comment (lib, "msimg32.lib")
 #pragma comment(lib,"Winmm.lib")
@@ -40,7 +39,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_DAPHNIAWINAPI, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-	NervousSystem::Init();
 	PPh::ObserverClient::Init();
 	PPh::ObserverClient::Instance()->StartSimulation();
 
