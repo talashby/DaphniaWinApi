@@ -161,6 +161,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return lastError;
 		}
 		HGDIOBJ selectedObjectOld = SelectObject(s_hdcMem, s_hbmBall);
+
+		if (!PPh::ObserverClient::Instance()->IsSimulationRunning())
+		{
+			uint32_t serverVersion = PPh::ObserverClient::Instance()->GetServerProtocolVersion();
+			if (serverVersion && serverVersion != PPh::CommonParams::PROTOCOL_VERSION)
+			{
+				std::string str = "Server protocol: " + std::to_string(serverVersion) + "\n" + "Client protocol: " +
+					std::to_string(PPh::CommonParams::PROTOCOL_VERSION);
+				MessageBox(hWnd, str.c_str(), "Wrong protocol", MB_OK);
+			}
+			else
+			{
+				MessageBox(hWnd, "Unknown server error", "Server error", MB_OK);
+			}
+			
+		}
 	}
 	break;
     case WM_COMMAND:
@@ -274,7 +290,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			RECT rc;
 			GetClientRect(hWnd, &rc);
-			rc.left = EYE_PIXEL_SIZE * PPh::CommonParams::OBSERVER_EYE_SIZE + EYE_PIXEL_SIZE;
+			rc.left = EYE_PIXEL_SIZE * PPh::GetObserverEyeSize() + EYE_PIXEL_SIZE;
 			rc.top += (rc.bottom - rc.top) / 5;
 			SelectObject(hdc, GetStockObject(BLACK_BRUSH));
 			Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom); // cleanup screen

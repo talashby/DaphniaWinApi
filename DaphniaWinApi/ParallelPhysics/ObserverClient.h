@@ -9,17 +9,25 @@
 
 namespace PPh
 {
+constexpr CommonParams::ObserverType OBSERVER_TYPE = CommonParams::ObserverType::Daphnia16x16;
+constexpr uint8_t GetObserverEyeSize()
+{
+	if (OBSERVER_TYPE == CommonParams::ObserverType::Daphnia8x8)
+	{
+		return 8;
+	}
+	return 16;
+}
 
-typedef int32_t PhotonParam; // warning! Depends on OBSERVER_EYE_SIZE
 constexpr int32_t UPDATE_EYE_TEXTURE_OUT = 20; // (milliseconds) how often update internal texture data 
 constexpr int32_t STATISTIC_REQUEST_PERIOD = 900; // milliseconds
 constexpr const char *SERVER_IP = "127.0.0.1";
 
 
-typedef std::array< std::array<OrientationVectorMath, CommonParams::OBSERVER_EYE_SIZE>, CommonParams::OBSERVER_EYE_SIZE> EyeArray;
+typedef std::array< std::array<OrientationVectorMath, GetObserverEyeSize()>, GetObserverEyeSize()> EyeArray;
 typedef std::shared_ptr< EyeArray > SP_EyeState;
-typedef std::array< std::array<EtherColor, CommonParams::OBSERVER_EYE_SIZE>, CommonParams::OBSERVER_EYE_SIZE> EyeColorArray;
-typedef std::array< std::array<uint64_t, CommonParams::OBSERVER_EYE_SIZE>, CommonParams::OBSERVER_EYE_SIZE> EyeUpdateTimeArray;
+typedef std::array< std::array<EtherColor, GetObserverEyeSize()>, GetObserverEyeSize()> EyeColorArray;
+typedef std::array< std::array<uint64_t, GetObserverEyeSize()>, GetObserverEyeSize()> EyeUpdateTimeArray;
 typedef std::shared_ptr< EyeColorArray > SP_EyeColorArray;
 
 class ObserverClient
@@ -55,6 +63,8 @@ public:
 		uint64_t &outClientServerPerformanceRatio,
 		uint64_t &outServerClientPerformanceRatio);
 
+	uint32_t GetServerProtocolVersion() const;
+
 	// Set motor neurons
 	void SetIsLeft(bool value) { m_isLeft = value; }
 	void SetIsRight(bool value) { m_isRight = value; }
@@ -73,6 +83,7 @@ private:
 
 	uint32_t m_socketC;
 	uint32_t m_port;
+	uint32_t m_serverProtocolVersion = 0;
 
 	const int32_t EYE_IMAGE_DELAY = 5000; // quantum of time
 	const int32_t ECHOLOCATION_FREQUENCY = 1; // quantum of time
